@@ -1,0 +1,80 @@
+#!/bin/bash
+#ofm1
+
+clear
+echo 'ofm1 - v0.1.1 cobrakenji'
+
+output() {
+    printf "\E[1;31;40m"
+    echo $1
+    printf "\E[0m"
+}
+
+output '##################################################'
+output '## ofm1 - vps setup script - ssh, fail2ban, ufw ##'
+output '##################################################'
+echo ##
+output '## You are about to change your SSH config to only allow'
+output '## access to port 21234. Root access will be disabled!'
+echo ##
+sleep 5s
+
+#adduser
+#read -p '## Enter the username you would like: ' uservar
+#adduser $uservar
+
+cd && cd ../..
+#change ssh port and disable root login
+cd etc/ssh/ && sed -i 's/Port 22/Port 21234/' sshd_config
+sed -i 's/PermitRootLogin yes/PermitRootLogin no/1' sshd_config
+cd && echo ##
+output '## unless there were errors ^^^ above, then...'
+output '## login credentials configured'
+echo ##
+output '## Note: /etc/ssh/sshd_config was modified such that root'
+output '## login is now disabled.'
+output '##' && echo ##
+ip -o addr show | awk '/inet/ {print $2, $3, $4}' | grep eth
+output '## ifconfig eth IP addresses are above ##'
+echo ##
+read  -n 1 -p '## Press any key to install dependencies and extra pkgs...'
+apt-get install -y software-properties-common ufw wget nano man build-essential python
+#apt-get install -y perl libnet-ssleay-perl libauthen-pam-perl libpam-runtime libio-pty-perl apt-show-versions libevent-dev gcc
+echo '##'
+echo '##'
+output '## Things were setup...'
+sleep 5s
+echo '##'
+output '## allow port 21234 in ufw firewall and enable'
+ufw allow 21234
+ufw enable
+output '## DONE.'
+
+apt-get update
+apt-get upgrade
+
+#update, install and configure  rkhunter / fail2ban
+echo '## fail2ban'
+apt-get install -y binutils libreadline5 libruby1.8 ruby ssl-cert aptitude
+sudo aptitude -y install fail2ban
+echo ##
+output '##' && echo ##
+output 'attmpting to stop f2b'
+service fail2ban stop
+read  -n 1 -p '## Fail2ban was downloaded. Press anykey to configure.'
+cd && cd ../..
+cd /etc/fail2ban/
+awk '{ printf "# "; print; }' /etc/fail2ban/jail.conf | sudo tee /etc/fail2ban/jail.local
+sed -i 's/bantime  = 600/bantime  = 84000/1' jail.conf
+sed -i 's/findtime  = 600/findtime  = 84000 /1' jail.conf
+sleep 5s
+echo '##' && echo ##
+service fail2ban start
+
+echo '##' && echo ##
+output '## fail2ban has been configured ##'
+echo '##' && echo ##
+output '##' && echo ##
+echo '## DONE ##'
+output '##' && echo ##
+sleep 5s
